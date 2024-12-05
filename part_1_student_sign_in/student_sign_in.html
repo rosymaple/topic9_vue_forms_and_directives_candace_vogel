@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Student Sign In</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="styles.css" type="text/css">
+</head>
+
+<body>
+<div id="app">
+
+    <div id="new-student-form-errors" class="m-2">
+        <!-- TODO show errors from form validation -->
+        <div v-if="formErrors.length > 0" class="alert alert-danger">
+            <li v-for="error in formErrors">
+                {{ error }}
+                <!-- for every element in formErrors array, iterate over formErrors...
+                and add each element to list in HTML. -->
+            </li>
+        </div>
+    </div>
+
+
+    <div id="new-student-form" class="card add-student m-2 p-2">
+        <h4 class="card-title">Add new student</h4>
+
+        <div class="form-group mb-3">
+            <label for="name">Name</label>
+            <!-- TODO v-model newStudentName -->
+            <!-- trim whitespace out of input -->
+            <input v-model.trim="newStudentName" id="name" class="form-control">
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="starID">Star ID</label>
+            <!-- TODO v-model newStarID -->
+            <input v-model.trim="newStarID" id="starID" class="form-control">
+        </div>
+
+        <!-- TODO v-on:click event handler -->
+        <button v-on:click="addStudent" class="btn btn-primary">Add</button>
+    </div>
+
+
+    <div id="student-list-table" class="card m-2 p-2">
+        <h4 class="card-title">Student List</h4>
+        <h5> {{ studentCount }} students in class.</h5>
+        <div id="student-table">
+            <table class="table">
+                <thead>
+                <tr>
+                    <!-- table headers for list of students -->
+                    <th>Name</th>
+                    <th>StarID</th>
+                    <th>Present?</th>
+                    <th>Delete?</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                <!-- TODO create table rows
+                Each row will have a checkbox, bound to the app's data
+                When the checkbox is checked/unchecked,
+                the student will be signed in/out -->
+
+                    <tr v-for="student in sortedStudents" v-bind:class="{
+                    present: student.present, absent: !student.present }">
+                        <!-- need to apply classes based on present or absent using two-way data binding-->
+                        <!-- v-for iterates over sortedStudents array -->
+
+                        <td>{{ student.name }}</td>
+                        <td>{{ student.starID }}</td>
+                        <td>
+                            <input type="checkbox" v-model="student.present" v-on:change="arrivedOrLeft(student)">
+                            <!-- checkbox input asks the user if present...
+                            v-on:change will update arrivedOrLeft method if checkbox is selected. -->
+                            <span v-if="student.present" class="mx-3">Here!</span>
+                            <!-- v-if will display to the user if user selects checkbox...
+                            and v-else will display if the user does not select checkbox. -->
+                            <span v-else class="mx-3">Not present</span>
+                        </td> <!-- todo checkbox for present/absent -->
+                        <td>
+                            <button v-on:click="deleteStudent(student)" class="btn btn-danger">
+                                <!-- the deleteStudent method is called for a student in studentList...
+                                if button is clicked.
+                                this list is formed by iterating over the studentList array...
+                                so there could be infinite delete buttons and infinite students!!!-->
+
+                                <!-- class used below to display trash can for delete button is from Bootstrap -->
+                                <i class="bi bi-trash-fill"></i>Delete
+                            </button>
+                        </td>
+
+                    </tr>   <!-- end of table rows iterating over studentList array -->
+                </tbody>    <!-- end of table body containing table rows -->
+            </table>
+        </div>
+    </div>
+
+    <div id="welcome-or-goodbye-message" class="m-2">
+
+        <div v-if="mostRecentStudent.name">     <!-- this div will only display if there is student activity -->
+            <div v-if="mostRecentStudent.present" class="alert alert-success">
+                <!-- using bootstrap classes to present stylized div blocks for specific types of messages -->
+                <!-- if present checkbox is selected, this div will appear to our user -->
+                Welcome {{ mostRecentStudent.name }}!
+            </div>
+            <div v-else class="alert alert-info">
+                <!-- using v-else and bootstrap class to display message if present checkbox is deselected-->
+                Goodbye {{ mostRecentStudent.name}}, see you later.
+            </div>
+        </div>      <!-- welcome or goodbye div will only show any messages if there is student activity -->
+
+        {{ sortedStudents }}        <!-- sortedStudents presented as an array of students, sorted alphabetically -->
+
+    </div>
+
+</div>
+
+<script>
+    // TODO Vue app
+
+    const { createApp, ref, computed } = Vue
+
+    createApp({
+        setup() {
+            // create reactive data
+
+            const newStudentName = ref('')
+            const newStarID = ref('')
+
+            // initialize reactive variables
+
+            // students have a name, a starID, present (boolean),
+            const studentList = ref([
+                { name: 'A. Student', starID: 'aa1234aa', present: false},
+                { name: 'B. Student', starID: 'bb1234aa', present: false},
+            ])
+
+            const formErrors = ref([])
+
+            const mostRecentStudent = ref({})
+            // storing a reactive object into mostRecentStudent
+
+            // create functions
+
+            function addStudent() {
+
+                formErrors.value = [] // reset form errors
+
+                // validation checks for length of value
+                if (!newStudentName.value) {
+                    formErrors.value.push('Student name must be entered.')
+                }
+                // validation checks
+                if (!newStarID.value) {
+                    formErrors.value.push('StarID must be entered.')
+                }
+                // checking if formErrors has any errors...
+                if (formErrors.value.length === 0) {
+                    let student = {
+                        name: newStudentName.value,
+                        starID: newStarID.value,
+                        present: false,
+                    }
+                    // push values into studentList
+                    studentList.value.push(student)
+                    newStudentName.value = ''
+                    newStarID.value = ''
+
+                }       // end of student element creation
+            }       // end of addStudent function
+
+            function arrivedOrLeft(student) {
+                mostRecentStudent.value = student
+                // this function names mostRecentStudent using arrivedOrLeft function,
+                // this function is only called during the checkbox input in our form.
+            }
+
+            function deleteStudent(studentToDelete) {
+
+                if (confirm(`Delete ${studentToDelete.name}?`)) {
+                    // using confirm method to ask user if they really want to delete studentToDelete...
+                    // if yes, deleteStudent will use filter on studentList.value to display every student except...
+                    // studentToDelete. we will use this function to attach to button using v:on
+                    studentList.value = studentList.value.filter(student => student != studentToDelete)
+                }
+                // another way to write deleteStudent function...
+                // const studentListWithoutDeletedStudent = []
+                // studentList.value.forEach(student => {
+                //     if (student != studentToDelete) {
+                //         studentListWithoutDeletedStudent.push(student)
+                //     }
+                // })
+                // studentList.value = studentListWithoutDeletedStudent
+            }
+
+            const sortedStudents = computed ( () => {
+                // computed function from Vue automatically recalculates when variables change
+                // use toSorted on studentList value's to create a new array called sortedStudents...
+                // use localeCompare
+                return studentList.value.toSorted ( (student1, student2) => {
+                    //
+                    return student1.name.localeCompare(student2.name)
+                    // localeCompare method compares two strings using alphabetical sorting
+                })
+            })
+
+            const studentCount = computed( () => {
+                // return the length of studentList
+                return studentList.value.length
+            })
+
+            return {
+                // return reactive data
+                studentList,
+                newStudentName,
+                newStarID,
+                formErrors,
+                // return functions
+                mostRecentStudent,
+                addStudent,
+                arrivedOrLeft,
+                deleteStudent,
+                sortedStudents,
+                studentCount
+                // return computed properties
+            }       // return all this data to Vue to use in app
+        }
+    }).mount('#app')        // attach vue app to HTML element
+
+
+
+</script>
+
+</body>
+
+</html>
